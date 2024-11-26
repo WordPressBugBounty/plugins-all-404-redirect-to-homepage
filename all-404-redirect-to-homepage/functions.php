@@ -19,6 +19,27 @@ function setup_redirects_table_and_migrate()
 	error_log("setup_redirects_table_and_migrate: Migration process completed.");
 }
 
+
+
+
+function p404_customizer_admin_inline_styles() {
+    // Check if we are in the Customizer page
+    if (is_customize_preview()) {
+        ?>
+        <style>
+            .accordion-section-title button.accordion-trigger {
+                /* Add your desired styles for Customizer accordion button here */
+               height:auto !important
+			}
+        </style>
+        <?php
+    }
+}
+add_action('customize_controls_print_styles', 'p404_customizer_admin_inline_styles');
+
+
+
+
 function create_redirects_table()
 {
 	global $wpdb;
