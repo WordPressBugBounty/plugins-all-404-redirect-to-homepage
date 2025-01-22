@@ -32,33 +32,39 @@ add_action('customize_controls_print_styles', 'p404_customizer_admin_inline_styl
 function create_redirects_table()
 {
 	global $wpdb;
-	$table_name = $wpdb->prefix . 'redirects_404';
+	$table_name = $wpdb->prefix . 'redirects_404'; // Replace 'your_table_name' with your actual table name
 
-	// Check if the table already exists
+	// Check if the table exists
 	if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+		// Check if the unique key exists on the url column
+		$unique_key_exists = $wpdb->get_var("
+        SELECT COUNT(*)
+        FROM INFORMATION_SCHEMA.STATISTICS
+        WHERE TABLE_SCHEMA = SCHEMA()
+          AND TABLE_NAME = '$table_name'
+          AND INDEX_NAME = 'url'
+    ");
+
+		if ($unique_key_exists) {
+			// Drop the unique key on the url column
+			$wpdb->query("ALTER TABLE $table_name DROP INDEX url;");
+		}
 		return true;
 	}
 
-	// Create the table
+	// Create the table if it doesn't exist
 	$charset_collate = $wpdb->get_charset_collate();
 	$sql = "CREATE TABLE $table_name (
-        id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-        url TEXT NOT NULL,
-        count INT(11) NOT NULL DEFAULT 1,
-        last_redirected DATETIME NOT NULL,
-        PRIMARY KEY (id),
-        UNIQUE KEY url (url(191))
-    ) $charset_collate;";
+    id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+    url TEXT NOT NULL,
+    count INT(11) NOT NULL DEFAULT 1,
+    last_redirected DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY url (url(191)) -- Change UNIQUE KEY to a regular KEY
+) $charset_collate;";
 
 	require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 	dbDelta($sql);
-
-	// Verify table creation
-	if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
-		return true;
-	} else {
-		return false;
-	}
 }
 
 function migrate_redirected_links()
@@ -122,9 +128,9 @@ function migrate_redirected_links()
 function p404_migrate_options()
 {
 	// Check if migration is already completed
-	$migration_status = get_option('p404_migration_status2', '0'); // Default: 0 (not migrated)
+	$migration_status = get_option('p404_migration_status2', '1'); // Default: 1 (not migrated)
 
-	if ($migration_status === '0') {
+	if ($migration_status === '1') {
 		// Perform migration
 		$options = get_option(OPTIONS404, array());
 
@@ -135,8 +141,8 @@ function p404_migrate_options()
 		// Save the updated options
 		update_option(OPTIONS404, $options);
 		setup_redirects_table_and_migrate();
-		// Update the migration status to `1` (migrated)
-		update_option('p404_migration_status2', '1');
+		// Update the migration status to `2` (migrated)
+		update_option('p404_migration_status2', '2');
 	}
 }
 add_action('plugins_loaded', 'p404_migrate_options');
