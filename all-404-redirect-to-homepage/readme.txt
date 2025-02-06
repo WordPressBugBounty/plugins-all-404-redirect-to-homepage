@@ -5,7 +5,7 @@ Requires at least: 4.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Tested up to: 6.7.1
-Stable tag: 5.1
+Stable tag: 5.2
 
 Using this plugin, you can fix all 404 error links by redirecting them to homepage using the SEO 301 redirection. Improve your SEO rank & pages speed
 
@@ -38,7 +38,7 @@ Elevate your website's SEO performance and user experience with our Smart 404 Er
 - Go to <b>404 URLs</b> tab to see the latest 404 links discovered and redirected
 
 **Note**
-Please make sure than the page you put above in the control panel to redirect all 404 to it is a valid link. If this page is not valid it will be considred as an 404 link and will result in redirect loop. In case of redirect loop you can simply disable the plugin and check the page is valid or not. 
+Please make sure than the page you put above in the control panel to redirect all 404 to it is a valid link. If this page is not valid it will be considered as an 404 link and will result in redirect loop. In case of redirect loop you can simply disable the plugin and check the page is valid or not. 
 
 == Installation ==
 
@@ -51,6 +51,9 @@ Extract the zip file and just drop the contents in the wp-content/plugins/ direc
 
 
 == Changelog ==
+
+= 5.2 =
+* Checking with the last version of wordpress 6.7.1
 
 = 5.1 =
 * Bug fixing in the options

@@ -160,7 +160,7 @@ if (P404REDIRECT_there_is_cache() != '') {
 
 
                         <br /><br />
-                        <div class="form-input-titles">Avoid logging any media links:</div>
+                        <div class="form-input-titles">Prevent logging media links:</div>
                         <?php
 
 

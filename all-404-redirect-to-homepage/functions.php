@@ -189,7 +189,7 @@ function sample_admin_notice__error()
 	$links_count = P404REDIRECT_read_option_value('links', 0);
 
 
-	if (get_option('P404_alert_msg') != 'hidemsg' && $links_count > 10) {
+	if (get_option('P404_alert_msg') != 'hidemsg' && $links_count > 500) {
 
 		$message = __('<h3>All 404 Redirect to Homepage</h3><b>Warning</b>, You have many broken links that hurt your site\'s rank in search engines, <a target="_blank" href="https://www.wp-buy.com/product/seo-redirection-premium-wordpress-plugin/#fix404links">UPGRADE</a> your plugin and empower your site\'s SEO.&nbsp; <span id="Hide404Alert" style="cursor:pointer" ><a href="javascript:void(0)"><strong> Dismiss</strong></a> this message</span> or check the plugin <a href="' . admin_url('admin.php?page=all-404-redirect-to-homepage.php') . '"><b>settings</b></a>.', 'sample-text-domain');
 
