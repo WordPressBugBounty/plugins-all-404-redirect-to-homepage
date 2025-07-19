@@ -1091,7 +1091,7 @@ function p404_get_email_subject($period, $error_count)
 {
 	$site_name = get_bloginfo('name');
 	//$period_text = ucfirst(string: $period);
-	
+
 	$period_text = isset($period) ? ucfirst($period) : 'Weekly';
 
 
@@ -1113,39 +1113,43 @@ function p404_generate_email_content($period, $stats)
 	<div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; background: #f5f5f5; padding: 20px;">
 		<div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
 			<!-- Header -->
-			<div style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; padding: 30px; text-align: center;">
-				<h1 style="margin: 0; font-size: 28px;">404 Error Analytics Report</h1>
-				<p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 18px;"><?php echo esc_html($site_name); ?></p>
-				<p style="margin: 5px 0 0 0; opacity: 0.8; font-size: 14px;">
+			<div style="background: white; color: black; padding: 20px; text-align: center;">
+				<h1 style="margin: 0; font-size: 24px; color: black; line-height: 1.3;">404 Error Analytics Report</h1>
+				<p style="margin: 10px 0 0 0; color: black; font-size: 16px; word-break: break-word; line-height: 1.4;"><?php echo esc_html($site_name); ?></p>
+				<p style="margin: 5px 0 0 0; color: black; font-size: 14px;">
 					<?php echo esc_html($date_range); ?>
 				</p>
 			</div>
 
 			<!-- Content -->
-			<div style="padding: 30px;">
+			<div style="padding: 20px;">
 				<!-- Executive Summary -->
-				<div style="background: #f8fafc; border-radius: 8px; padding: 25px; margin-bottom: 30px; border-left: 5px solid #6b7280; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+				<div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 30px; border-left: 5px solid #6b7280; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
 					<h2 style="color: #1e293b; margin-top: 0; font-size: 20px;">General Statistics</h2>
-					<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; justify-content: space-around;">
-						<div style="flex: 1; min-width: 150px; text-align: center; max-width: 180px;">
-							<div style="font-size: 32px; font-weight: bold; color: <?php echo $stats['total_errors'] > 100 ? '#dc2626' : '#16a34a'; ?>;">
+
+					<!-- Mobile-friendly stats grid -->
+					<div style="width: 100%;">
+						<div style="display: block; margin-bottom: 20px; text-align: center; padding: 15px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+							<div style="font-size: 32px; font-weight: bold; color: <?php echo $stats['total_errors'] > 100 ? '#dc2626' : '#16a34a'; ?>; margin-bottom: 5px;">
 								<?php echo number_format($stats['total_errors']); ?>
 							</div>
-							<div style="color: #64748b; font-size: 14px;">Total 404 Errors</div>
+							<div style="color: #64748b; font-size: 14px; margin-bottom: 5px;">Total 404 Errors</div>
 							<?php if ($stats['percentage_change'] != 0): ?>
-								<div style="color: <?php echo $stats['percentage_change'] > 0 ? '#dc2626' : '#16a34a'; ?>; font-size: 12px; margin-top: 5px;">
+								<div style="color: <?php echo $stats['percentage_change'] > 0 ? '#dc2626' : '#16a34a'; ?>; font-size: 12px;">
 									<?php echo $stats['percentage_change'] > 0 ? '↗' : '↘'; ?> <?php echo abs($stats['percentage_change']); ?>% vs previous <?php echo $period; ?>
 								</div>
 							<?php endif; ?>
 						</div>
-						<div style="flex: 1; min-width: 150px; text-align: center; max-width: 180px;">
-							<div style="font-size: 24px; font-weight: bold; color: #4b5563;">
+
+						<div style="display: block; margin-bottom: 20px; text-align: center; padding: 15px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+							<div style="font-size: 24px; font-weight: bold; color: #4b5563; margin-bottom: 5px;">
 								<?php echo number_format($stats['unique_urls']); ?>
 							</div>
 							<div style="color: #64748b; font-size: 14px;">Unique Broken URLs</div>
 						</div>
-						<div style="flex: 1; min-width: 150px; text-align: center; max-width: 180px;">
-							<div style="font-size: 24px; font-weight: bold; color: #6b7280;">
+
+						<div style="display: block; margin-bottom: 10px; text-align: center; padding: 15px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+							<div style="font-size: 24px; font-weight: bold; color: #6b7280; margin-bottom: 5px;">
 								<?php echo number_format($stats['unique_ips']); ?>
 							</div>
 							<div style="color: #64748b; font-size: 14px;">Unique Visitors</div>
@@ -1156,130 +1160,143 @@ function p404_generate_email_content($period, $stats)
 				<?php if (!empty($stats['daily_trend']) && count($stats['daily_trend']) > 1): ?>
 					<!-- Trend Analysis -->
 					<h2 style="color: #1e293b; margin-bottom: 15px;">7-Day Trend Analysis</h2>
-					<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-						<table style="width: 100%; border-collapse: collapse;">
-							<thead>
-								<tr style="background: #f1f5f9;">
-									<th style="padding: 10px; text-align: left; border-bottom: 2px solid #d1d5db; color: #374151;">Date</th>
-									<th style="padding: 10px; text-align: center; border-bottom: 2px solid #d1d5db; color: #374151;">Errors</th>
-									<th style="padding: 10px; text-align: center; border-bottom: 2px solid #d1d5db; color: #374151;">Trend</th>
-								</tr>
-							</thead>
-							<tbody>
-								<?php
-								$prev_errors = 0;
-								foreach ($stats['daily_trend'] as $index => $day):
-									$trend_indicator = '';
-									if ($index > 0) {
-										if ($day['errors'] > $prev_errors) {
-											$trend_indicator = '<span style="color: #dc2626;">↗</span>';
-										} elseif ($day['errors'] < $prev_errors) {
-											$trend_indicator = '<span style="color: #16a34a;">↘</span>';
-										} else {
-											$trend_indicator = '<span style="color: #6b7280;">→</span>';
-										}
-									}
-									$prev_errors = $day['errors'];
-								?>
-									<tr>
-										<td style="padding: 8px 10px; border-bottom: 1px solid #f1f5f9;">
-											<?php echo date('M j, Y', strtotime($day['date'])); ?>
-										</td>
-										<td style="padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold;">
-											<?php echo number_format($day['errors']); ?>
-										</td>
-										<td style="padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: center;">
-											<?php echo $trend_indicator; ?>
-										</td>
+					<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto;">
+						<div style="min-width: 300px;">
+							<table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+								<thead>
+									<tr style="background: #f1f5f9;">
+										<th style="padding: 8px; text-align: left; border-bottom: 2px solid #d1d5db; color: #374151;">Date</th>
+										<th style="padding: 8px; text-align: center; border-bottom: 2px solid #d1d5db; color: #374151;">Errors</th>
+										<th style="padding: 8px; text-align: center; border-bottom: 2px solid #d1d5db; color: #374151;">Trend</th>
 									</tr>
-								<?php endforeach; ?>
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									<?php
+									$prev_errors = 0;
+									foreach ($stats['daily_trend'] as $index => $day):
+										$trend_indicator = '';
+										if ($index > 0) {
+											if ($day['errors'] > $prev_errors) {
+												$trend_indicator = '<span style="color: #dc2626;">↗</span>';
+											} elseif ($day['errors'] < $prev_errors) {
+												$trend_indicator = '<span style="color: #16a34a;">↘</span>';
+											} else {
+												$trend_indicator = '<span style="color: #6b7280;">→</span>';
+											}
+										}
+										$prev_errors = $day['errors'];
+									?>
+										<tr>
+											<td style="padding: 6px 8px; border-bottom: 1px solid #f1f5f9; font-size: 12px;">
+												<?php echo date('M j', strtotime($day['date'])); ?>
+											</td>
+											<td style="padding: 6px 8px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold;">
+												<?php echo number_format($day['errors']); ?>
+											</td>
+											<td style="padding: 6px 8px; border-bottom: 1px solid #f1f5f9; text-align: center;">
+												<?php echo $trend_indicator; ?>
+											</td>
+										</tr>
+									<?php endforeach; ?>
+								</tbody>
+							</table>
+						</div>
 					</div>
 				<?php endif; ?>
 
 				<?php if (!empty($stats['top_urls'])): ?>
 					<!-- Top Broken URLs -->
 					<h2 style="color: #1e293b; margin-bottom: 15px;">Most Frequent 404 URLs</h2>
-					<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-						<table style="width: 100%; border-collapse: collapse;">
-							<thead>
-								<tr style="background: #f1f5f9;">
-									<th style="padding: 12px; text-align: left; border-bottom: 2px solid #d1d5db; color: #374151;">URL</th>
-									<th style="padding: 12px; text-align: center; border-bottom: 2px solid #d1d5db; width: 80px; color: #374151;">Hits</th>
-									<th style="padding: 12px; text-align: center; border-bottom: 2px solid #d1d5db; width: 100px; color: #374151;">% of Total</th>
-								</tr>
-							</thead>
-							<tbody>
-								<?php foreach ($stats['top_urls'] as $url_data):
-									$percentage = $stats['total_errors'] > 0 ? round(($url_data['hits'] / $stats['total_errors']) * 100, 1) : 0;
-								?>
-									<tr>
-										<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-family: monospace; font-size: 12px; word-break: break-all;">
-											<?php echo esc_html($url_data['url']); ?>
-										</td>
-										<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold; color: #dc2626;">
-											<?php echo number_format($url_data['hits']); ?>
-										</td>
-										<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold; color: #6b7280;">
-											<?php echo $percentage; ?>%
-										</td>
+					<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto;">
+						<div style="min-width: 320px;">
+							<table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+								<thead>
+									<tr style="background: #f1f5f9;">
+										<th style="padding: 8px; text-align: left; border-bottom: 2px solid #d1d5db; color: #374151;">URL</th>
+										<th style="padding: 8px; text-align: center; border-bottom: 2px solid #d1d5db; width: 60px; color: #374151;">Hits</th>
+										<th style="padding: 8px; text-align: center; border-bottom: 2px solid #d1d5db; width: 60px; color: #374151;">%</th>
 									</tr>
-								<?php endforeach; ?>
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									<?php foreach ($stats['top_urls'] as $url_data):
+										$percentage = $stats['total_errors'] > 0 ? round(($url_data['hits'] / $stats['total_errors']) * 100, 1) : 0;
+									?>
+										<tr>
+											<td style="padding: 8px; border-bottom: 1px solid #f1f5f9; font-family: monospace; font-size: 11px; word-break: break-all; max-width: 200px; overflow: hidden;">
+												<a href="<?php echo esc_url($url_data['url']); ?>"
+													style="color: #2563eb; text-decoration: underline; word-break: break-all;"
+													target="_blank"
+													rel="noopener noreferrer">
+													<?php echo esc_html($url_data['url']); ?>
+												</a>
+											</td>
+											<td style="padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold; color: #dc2626;">
+												<?php echo number_format($url_data['hits']); ?>
+											</td>
+											<td style="padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold; color: #6b7280;">
+												<?php echo $percentage; ?>%
+											</td>
+										</tr>
+									<?php endforeach; ?>
+								</tbody>
+							</table>
+						</div>
 					</div>
 				<?php endif; ?>
 
 				<?php if (!empty($stats['top_referrers'])): ?>
 					<!-- Top Referrers -->
 					<h2 style="color: #1e293b; margin-bottom: 15px;">Top Traffic Sources Causing 404s</h2>
-					<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-						<table style="width: 100%; border-collapse: collapse;">
-							<thead>
-								<tr style="background: #f1f5f9;">
-									<th style="padding: 12px; text-align: left; border-bottom: 2px solid #d1d5db; color: #374151;">Referrer</th>
-									<th style="padding: 12px; text-align: center; border-bottom: 2px solid #d1d5db; width: 80px; color: #374151;">Hits</th>
-									<th style="padding: 12px; text-align: center; border-bottom: 2px solid #d1d5db; width: 100px; color: #374151;">Visitors</th>
-								</tr>
-							</thead>
-							<tbody>
-								<?php foreach ($stats['top_referrers'] as $referrer_data): ?>
-									<tr>
-										<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9;">
-											<?php echo esc_html($referrer_data['referrer_domain']); ?>
-										</td>
-										<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold; color: #4b5563;">
-											<?php echo number_format($referrer_data['hits']); ?>
-										</td>
-										<td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold; color: #6b7280;">
-											<?php echo number_format($referrer_data['unique_visitors']); ?>
-										</td>
+					<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto;">
+						<div style="min-width: 300px;">
+							<table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+								<thead>
+									<tr style="background: #f1f5f9;">
+										<th style="padding: 8px; text-align: left; border-bottom: 2px solid #d1d5db; color: #374151;">Referrer</th>
+										<th style="padding: 8px; text-align: center; border-bottom: 2px solid #d1d5db; width: 60px; color: #374151;">Hits</th>
+										<th style="padding: 8px; text-align: center; border-bottom: 2px solid #d1d5db; width: 70px; color: #374151;">Visitors</th>
 									</tr>
-								<?php endforeach; ?>
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									<?php foreach ($stats['top_referrers'] as $referrer_data): ?>
+										<tr>
+											<td style="padding: 8px; border-bottom: 1px solid #f1f5f9; word-break: break-all; max-width: 150px; overflow: hidden;">
+												<?php echo esc_html($referrer_data['referrer_domain']); ?>
+											</td>
+											<td style="padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold; color: #4b5563;">
+												<?php echo number_format($referrer_data['hits']); ?>
+											</td>
+											<td style="padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: bold; color: #6b7280;">
+												<?php echo number_format($referrer_data['unique_visitors']); ?>
+											</td>
+										</tr>
+									<?php endforeach; ?>
+								</tbody>
+							</table>
+						</div>
 					</div>
 				<?php endif; ?>
 
 				<!-- URL Analysis -->
 				<h2 style="color: #1e293b; margin-bottom: 15px;">URL Analysis</h2>
 				<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-					<div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 15px; align-items: flex-start; justify-content: space-around;">
-						<div style="flex: 1; min-width: 120px; text-align: center; max-width: 150px;">
-							<div style="font-size: 24px; font-weight: bold; color: #dc2626;">
+					<div style="width: 100%;">
+						<div style="display: block; margin-bottom: 15px; text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+							<div style="font-size: 24px; font-weight: bold; color: #dc2626; margin-bottom: 5px;">
 								<?php echo number_format($stats['new_urls']); ?>
 							</div>
 							<div style="color: #64748b; font-size: 14px;">New Broken URLs</div>
 						</div>
-						<div style="flex: 1; min-width: 120px; text-align: center; max-width: 150px;">
-							<div style="font-size: 24px; font-weight: bold; color: #f59e0b;">
+
+						<div style="display: block; margin-bottom: 15px; text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+							<div style="font-size: 24px; font-weight: bold; color: #f59e0b; margin-bottom: 5px;">
 								<?php echo number_format($stats['recurring_urls']); ?>
 							</div>
 							<div style="color: #64748b; font-size: 14px;">Recurring Issues</div>
 						</div>
-						<div style="flex: 1; min-width: 120px; text-align: center; max-width: 150px;">
-							<div style="font-size: 24px; font-weight: bold; color: #6b7280;">
+
+						<div style="display: block; margin-bottom: 10px; text-align: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+							<div style="font-size: 24px; font-weight: bold; color: #6b7280; margin-bottom: 5px;">
 								<?php echo $stats['avg_errors_per_day']; ?>
 							</div>
 							<div style="color: #64748b; font-size: 14px;">Avg Errors/Day</div>
@@ -1336,16 +1353,20 @@ function p404_generate_email_content($period, $stats)
 					</div>
 				</div>
 
-				<!-- Action Buttons -->
+				<!-- Mobile-friendly buttons -->
 				<div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
-					<a href="<?php echo admin_url('admin.php?page=all-404-redirect-to-homepage.php&mytab=404urls'); ?>"
-						style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-right: 15px; display: inline-block; box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);">
-						View All 404 URLs
-					</a>
-					<a href="<?php echo admin_url('admin.php?page=all-404-redirect-to-homepage.php'); ?>"
-						style="background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 2px 4px rgba(156, 163, 175, 0.2);">
-						Plugin Settings
-					</a>
+					<div style="margin-bottom: 10px;">
+						<a href="<?php echo admin_url('admin.php?page=all-404-redirect-to-homepage.php&mytab=404urls'); ?>"
+							style="background: #6b7280; color: white; padding: 10px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2); max-width: 180px; width: 100%; text-align: center; font-size: 14px; box-sizing: border-box;">
+							View All 404 URLs
+						</a>
+					</div>
+					<div>
+						<a href="<?php echo admin_url('admin.php?page=all-404-redirect-to-homepage.php'); ?>"
+							style="background: #9ca3af; color: white; padding: 10px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; box-shadow: 0 2px 4px rgba(156, 163, 175, 0.2); max-width: 180px; width: 100%; text-align: center; font-size: 14px; box-sizing: border-box;">
+							Plugin Settings
+						</a>
+					</div>
 				</div>
 
 				<!-- Performance Insights -->
@@ -1368,15 +1389,15 @@ function p404_generate_email_content($period, $stats)
 			</div>
 
 			<!-- Footer -->
-			<div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 25px; text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #e2e8f0;">
+			<div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 20px; text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #e2e8f0;">
 				<div style="margin-bottom: 10px;">
 					<strong>404 Analytics Report</strong> - Generated by <a href="https://wordpress.org/plugins/all-404-redirect-to-homepage/" style="color: #6b7280; text-decoration: none;">All 404 Redirect to Homepage Plugin</a>
 				</div>
 				<div style="margin-bottom: 10px;">
 					<?php echo esc_html(get_site_url()); ?>
 				</div>
-				<div style="opacity: 0.8;">
-					Report generated on <?php echo date('F j, Y \a\t g:i A'); ?> |
+				<div style="opacity: 0.8; line-height: 1.4;">
+					Report generated on <?php echo date('F j, Y \a\t g:i A'); ?><br>
 					<a href="<?php echo admin_url('admin.php?page=all-404-redirect-to-homepage.php'); ?>" style="color: #6b7280;">Manage Email Settings</a>
 				</div>
 			</div>
@@ -1386,6 +1407,7 @@ function p404_generate_email_content($period, $stats)
 
 	return ob_get_clean();
 }
+
 // Format date range for display
 function p404_format_date_range($period, $start_date, $end_date)
 {
@@ -1440,7 +1462,7 @@ function p404_send_test_email()
 	$subject = "TEST: " . p404_get_email_subject('weekly', $stats['total_errors']);
 	$message = p404_generate_email_content('weekly', $stats);
 
-	$admin_email = 'ibomsh2222@gmail.com'; // Use a fixed email for testing
+	$admin_email = get_option('admin_email');
 	$headers = array(
 		'Content-Type: text/html; charset=UTF-8',
 		'From: ' . get_bloginfo('name') . ' <' . $admin_email . '>'
