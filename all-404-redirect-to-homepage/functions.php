@@ -469,13 +469,37 @@ function P404REDIRECT_get_current_URL()
 
 	// Sanitize host
 	$host = isset($_SERVER['HTTP_HOST']) ? sanitize_text_field($_SERVER['HTTP_HOST']) : '';
+
+	// Also check X-Forwarded-Host for reverse proxies / CDN (e.g. Cloudflare, Nginx)
+	if ( empty($host) && isset($_SERVER['HTTP_X_FORWARDED_HOST']) ) {
+		$forwarded_hosts = explode(',', $_SERVER['HTTP_X_FORWARDED_HOST']);
+		$host = sanitize_text_field(trim($forwarded_hosts[0]));
+	}
+
 	if (empty($host)) {
 		return home_url(); // Fallback to WordPress home URL
 	}
 
 	// Validate host against allowed hosts
-	$parsed_home = parse_url(home_url());
-	if ($host !== $parsed_home['host']) {
+	$parsed_home  = parse_url(home_url());
+	$home_host    = isset($parsed_home['host']) ? strtolower($parsed_home['host']) : '';
+	$request_host = strtolower($host);
+
+	// Strip port numbers before comparison (e.g. example.com:8080 → example.com)
+	$request_host_no_port = preg_replace('/:\d+$/', '', $request_host);
+	$home_host_no_port    = preg_replace('/:\d+$/', '', $home_host);
+
+	// Build list of allowed hosts: bare domain + www variant
+	$allowed_hosts = array( $home_host_no_port );
+	if ( strpos($home_host_no_port, 'www.') === 0 ) {
+		// home_url has www → also allow without www
+		$allowed_hosts[] = substr($home_host_no_port, 4);
+	} else {
+		// home_url has no www → also allow with www
+		$allowed_hosts[] = 'www.' . $home_host_no_port;
+	}
+
+	if ( ! in_array($request_host_no_port, $allowed_hosts, true) ) {
 		error_log('P404 Plugin: Suspicious host detected - ' . $host);
 		return home_url(); // Security fallback
 	}
