@@ -5,7 +5,7 @@ Requires at least: 4.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Tested up to: 6.9
-Stable tag: 5.6
+Stable tag: 5.7
 
 Using this plugin, you can fix all 404 error links by redirecting them to homepage using the SEO 301 redirection. Improve your SEO rank & pages speed
 
@@ -51,6 +51,16 @@ Extract the zip file and just drop the contents in the wp-content/plugins/ direc
 
 
 == Changelog ==
+
+= 5.7 =
+* Security: Hardened 404 redirection to use wp_safe_redirect() with URL sanitization, preventing header/CRLF injection and open redirects.
+* Security: The infinite-loop warning is now shown only to administrators instead of all visitors.
+* Fixed 404 image options being saved to the wrong option key, so stale-image cleanup now works correctly.
+* Fixed the settings page showing a false error when image redirection is disabled.
+* Fixed a heredoc closing marker that could cause a fatal error on older PHP versions.
+* Hardened $_POST handling on the settings page and AJAX handlers (nonce, capability, and isset checks).
+* Removed dead code with an undefined database object and an unprepared SQL query.
+* Logging now only writes when WP_DEBUG is enabled, keeping production debug logs clean.
 
 = 5.6 =
 * Fixed false "Suspicious host detected" warnings by allowing www/non-www variants, port numbers, and CDN/proxy forwarded hosts in URL validation.

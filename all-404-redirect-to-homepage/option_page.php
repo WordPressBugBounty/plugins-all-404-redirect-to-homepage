@@ -12,16 +12,20 @@ if (isset($_GET['page']) && $_GET['page'] == 'all-404-redirect-to-homepage.php')
     p404_cleanup_image_options();
 }
 if ($redirect_to !== '') {
-    if (wp_verify_nonce($nonce, 'p404home_nounce')) {
-        P404REDIRECT_save_option_value('p404_execlude_media', sanitize_text_field($_POST['p404_execlude_media']));
-        P404REDIRECT_save_option_value('p404_redirect_to', $redirect_to);
-        P404REDIRECT_save_option_value('p404_status', sanitize_text_field($_POST['p404_status']));
-        P404REDIRECT_save_option_value('img_p404_status', sanitize_text_field($_POST['img_p404_status']));
-        P404REDIRECT_save_option_value('image_id_p404_redirect_to', sanitize_text_field($_POST['misha-img']));
-        P404REDIRECT_save_option_value('p404_redirect_type', sanitize_text_field($_POST['p404_redirect_type']));
-        P404REDIRECT_save_option_value('email_notifications_enabled', sanitize_text_field($_POST['email_notifications_enabled']));
-        P404REDIRECT_save_option_value('email_frequency', sanitize_text_field($_POST['email_frequency']));
-        P404REDIRECT_save_option_value('notification_email', sanitize_email($_POST['notification_email']));
+    if (wp_verify_nonce($nonce, 'p404home_nounce') && current_user_can('manage_options')) {
+        $post_val = function ($key, $default = '') {
+            return isset($_POST[$key]) ? sanitize_text_field(wp_unslash($_POST[$key])) : $default;
+        };
+
+        P404REDIRECT_save_option_value('p404_execlude_media', $post_val('p404_execlude_media', '1'));
+        P404REDIRECT_save_option_value('p404_redirect_to', esc_url_raw($redirect_to));
+        P404REDIRECT_save_option_value('p404_status', $post_val('p404_status', '2'));
+        P404REDIRECT_save_option_value('img_p404_status', $post_val('img_p404_status', '2'));
+        P404REDIRECT_save_option_value('image_id_p404_redirect_to', absint(isset($_POST['misha-img']) ? $_POST['misha-img'] : 0));
+        P404REDIRECT_save_option_value('p404_redirect_type', $post_val('p404_redirect_type', '301'));
+        P404REDIRECT_save_option_value('email_notifications_enabled', $post_val('email_notifications_enabled', '2'));
+        P404REDIRECT_save_option_value('email_frequency', $post_val('email_frequency', 'weekly'));
+        P404REDIRECT_save_option_value('notification_email', sanitize_email(isset($_POST['notification_email']) ? wp_unslash($_POST['notification_email']) : ''));
         p404_update_email_schedules();
         if (isset($_POST['img_p404_status']) && $_POST['img_p404_status'] == 1) {
             if (isset($_POST['misha-img']) && $_POST['misha-img'] != '') {
@@ -174,9 +178,9 @@ function p404_cleanup_image_options()
     if ($image_id != '') {
         $image_data = wp_get_attachment_image_src($image_id);
         if (!$image_data || empty($image_data[0])) {
-            // Image doesn't exist, clear the option
+            // Image doesn't exist, clear the option (use the real option key)
             $options['image_id_p404_redirect_to'] = '';
-            update_option('p404_redirect_options', $options);
+            P404REDIRECT_update_my_options($options);
             return false;
         }
     }

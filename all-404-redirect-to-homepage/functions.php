@@ -1,5 +1,22 @@
 <?php
 if (! defined('ABSPATH')) exit; // Exit if accessed directly
+
+/**
+ * Internal logger for the plugin.
+ *
+ * Only writes to the PHP error log when WP_DEBUG (and WP_DEBUG_LOG) is enabled,
+ * so production sites don't get their debug.log flooded with routine messages.
+ * Use this instead of calling error_log() directly.
+ *
+ * @param string $message Message to log (will be prefixed).
+ */
+function p404_log($message)
+{
+	if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+		error_log('P404 Plugin: ' . $message);
+	}
+}
+
 function setup_redirects_table_and_migrate()
 {
 	global $wpdb;
@@ -26,10 +43,8 @@ function p404_check_and_upgrade_database()
 		// Only mark as completed if upgrade was successful
 		if ($upgrade_success) {
 			update_option('P404_email_update', 1);
-			error_log("P404 Plugin: Database upgrade completed successfully via plugins_loaded");
 		} else {
 			// Log failure but don't mark as completed - will retry on next load
-			error_log("P404 Plugin: Database upgrade failed, will retry on next page load");
 		}
 	}
 }
@@ -87,7 +102,7 @@ function p404_create_new_table_with_columns_secure($table_name)
 
 		// Check for errors
 		if ($wpdb->last_error) {
-			error_log("P404 Plugin: Database error creating table - " . $wpdb->last_error);
+			p404_log("Database error creating table - " . $wpdb->last_error);
 			return false;
 		}
 
@@ -95,14 +110,13 @@ function p404_create_new_table_with_columns_secure($table_name)
 		$table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table_name));
 
 		if ($table_exists != $table_name) {
-			error_log("P404 Plugin: Table creation verification failed");
+			p404_log("Table creation verification failed");
 			return false;
 		}
 
-		error_log("P404 Plugin: New table created with all columns");
 		return true;
 	} catch (Exception $e) {
-		error_log("P404 Plugin: Exception creating new table - " . $e->getMessage());
+		p404_log("Exception creating new table - " . $e->getMessage());
 		return false;
 	}
 }
@@ -122,9 +136,8 @@ function create_redirects_table()
 
 			if ($upgrade_success) {
 				update_option('P404_email_update', 1);
-				error_log("P404 Plugin: Database upgrade completed successfully");
 			} else {
-				error_log("P404 Plugin: Database upgrade failed");
+				p404_log("Database upgrade failed");
 				return false;
 			}
 		}
@@ -133,13 +146,13 @@ function create_redirects_table()
 		$table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table_name));
 
 		if ($wpdb->last_error) {
-			error_log('P404 Plugin: Database error checking table existence - ' . $wpdb->last_error);
+			p404_log('Database error checking table existence - ' . $wpdb->last_error);
 			return false;
 		}
 
 		return ($table_exists == $table_name);
 	} catch (Exception $e) {
-		error_log('P404 Plugin: Exception in create_redirects_table - ' . $e->getMessage());
+		p404_log('Exception in create_redirects_table - ' . $e->getMessage());
 		return false;
 	}
 }
@@ -211,7 +224,7 @@ function p404_handle_database_upgrade_secure()
 		$table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table_name));
 
 		if ($wpdb->last_error) {
-			error_log('P404 Plugin: Database error checking table - ' . $wpdb->last_error);
+			p404_log('Database error checking table - ' . $wpdb->last_error);
 			return false;
 		}
 
@@ -232,7 +245,7 @@ function p404_handle_database_upgrade_secure()
 		return true; // Success
 
 	} catch (Exception $e) {
-		error_log("P404 Plugin: Database upgrade exception - " . $e->getMessage());
+		p404_log("Database upgrade exception - " . $e->getMessage());
 		return false;
 	}
 }
@@ -248,12 +261,12 @@ function p404_alter_existing_table_secure($table_name)
 		$columns = $wpdb->get_results("DESCRIBE {$table_name}");
 
 		if ($wpdb->last_error) {
-			error_log("P404 Plugin: Failed to describe table structure - " . $wpdb->last_error);
+			p404_log("Failed to describe table structure - " . $wpdb->last_error);
 			return false;
 		}
 
 		if ($columns === false || empty($columns)) {
-			error_log("P404 Plugin: Unable to get table structure");
+			p404_log("Unable to get table structure");
 			return false;
 		}
 
@@ -270,11 +283,10 @@ function p404_alter_existing_table_secure($table_name)
 			$result = $wpdb->query("ALTER TABLE {$table_name} ADD COLUMN ip_address VARCHAR(45) NULL AFTER url");
 
 			if ($result === false || $wpdb->last_error) {
-				error_log("P404 Plugin: Failed to add ip_address column - " . $wpdb->last_error);
+				p404_log("Failed to add ip_address column - " . $wpdb->last_error);
 				return false;
 			}
 
-			error_log("P404 Plugin: Added ip_address column to existing table");
 			$changes_made = true;
 		}
 
@@ -284,11 +296,10 @@ function p404_alter_existing_table_secure($table_name)
 			$result = $wpdb->query("ALTER TABLE {$table_name} ADD COLUMN referrer TEXT NULL AFTER ip_address");
 
 			if ($result === false || $wpdb->last_error) {
-				error_log("P404 Plugin: Failed to add referrer column - " . $wpdb->last_error);
+				p404_log("Failed to add referrer column - " . $wpdb->last_error);
 				return false;
 			}
 
-			error_log("P404 Plugin: Added referrer column to existing table");
 			$changes_made = true;
 		}
 
@@ -302,10 +313,9 @@ function p404_alter_existing_table_secure($table_name)
 			$wpdb->suppress_errors(false);
 		}
 
-		error_log("P404 Plugin: Existing table altered successfully");
 		return true;
 	} catch (Exception $e) {
-		error_log("P404 Plugin: Error altering existing table - " . $e->getMessage());
+		p404_log("Error altering existing table - " . $e->getMessage());
 		return false;
 	}
 }
@@ -500,7 +510,7 @@ function P404REDIRECT_get_current_URL()
 	}
 
 	if ( ! in_array($request_host_no_port, $allowed_hosts, true) ) {
-		error_log('P404 Plugin: Suspicious host detected - ' . $host);
+		p404_log('Suspicious host detected - ' . $host);
 		return home_url(); // Security fallback
 	}
 
@@ -516,7 +526,7 @@ function P404REDIRECT_get_current_URL()
 
 	// Additional validation
 	if (strlen($uri) > 2000) { // URLs shouldn't be this long
-		error_log('P404 Plugin: Unusually long URI detected');
+		p404_log('Unusually long URI detected');
 		return home_url();
 	}
 
@@ -638,7 +648,7 @@ function P404REDIRECT_add_redirected_link($link)
         ", $link, $ip_address, $referrer, date('Y-m-d H:i:s', strtotime('-1 hour'))));
 
 		if ($wpdb->last_error) {
-			error_log('P404 Plugin: Database error checking recent entry - ' . $wpdb->last_error);
+			p404_log('Database error checking recent entry - ' . $wpdb->last_error);
 			return false;
 		}
 
@@ -657,7 +667,7 @@ function P404REDIRECT_add_redirected_link($link)
 			);
 
 			if ($wpdb->last_error) {
-				error_log('P404 Plugin: Database error updating redirect count - ' . $wpdb->last_error);
+				p404_log('Database error updating redirect count - ' . $wpdb->last_error);
 				return false;
 			}
 		} else {
@@ -676,14 +686,14 @@ function P404REDIRECT_add_redirected_link($link)
 			);
 
 			if ($wpdb->last_error) {
-				error_log('P404 Plugin: Database error inserting new redirect - ' . $wpdb->last_error);
+				p404_log('Database error inserting new redirect - ' . $wpdb->last_error);
 				return false;
 			}
 		}
 
 		return true;
 	} catch (Exception $e) {
-		error_log('P404 Plugin: Exception in add_redirected_link - ' . $e->getMessage());
+		p404_log('Exception in add_redirected_link - ' . $e->getMessage());
 		return false;
 	}
 }
@@ -911,7 +921,6 @@ function p404_send_email_summary($period)
 	// Check if notifications are still enabled
 	$email_enabled = P404REDIRECT_read_option_value('email_notifications_enabled', '2');
 	if ($email_enabled != '1') {
-		error_log("P404 Plugin: Email notifications disabled, skipping {$period} email");
 		return;
 	}
 
@@ -926,7 +935,6 @@ function p404_send_email_summary($period)
 
 		// If email was sent within last hour, skip
 		if ($time_diff < 3600) { // 3600 seconds = 1 hour
-			error_log("P404 Plugin: {$period} email already sent recently (" . round($time_diff / 60) . " minutes ago), skipping");
 			return;
 		}
 	}
@@ -938,7 +946,6 @@ function p404_send_email_summary($period)
 
 	// Only send email if there are 404 errors
 	if ($stats['total_errors'] == 0) {
-		error_log("P404 Plugin: No 404 errors found for {$period} period, skipping email");
 		return;
 	}
 
@@ -959,12 +966,9 @@ function p404_send_email_summary($period)
 	// Send email with error handling
 	$sent = wp_mail($notification_email, $subject, $message, $headers);
 
-	if ($sent) {
-		// Log successful email send
-		error_log("P404 Plugin: {$period} email summary sent successfully to {$notification_email}");
-	} else {
+	if (!$sent) {
 		// Log failed email send and reset the timestamp
-		error_log("P404 Plugin: Failed to send {$period} email summary to {$notification_email}");
+		p404_log("Failed to send {$period} email summary to {$notification_email}");
 		// Reset the timestamp since email failed
 		P404REDIRECT_save_option_value($last_sent_key, $last_sent);
 	}
@@ -1494,10 +1498,8 @@ function p404_send_test_email()
 
 	$sent = wp_mail($admin_email, $subject, $message, $headers);
 
-	if ($sent) {
-		error_log("P404 Plugin: Test email sent successfully to {$admin_email}");
-	} else {
-		error_log("P404 Plugin: Failed to send test email to {$admin_email}");
+	if (!$sent) {
+		p404_log("Failed to send test email to {$admin_email}");
 	}
 
 	return $sent;
@@ -1507,7 +1509,7 @@ add_action('wp_ajax_delete_previous_404_image', 'handle_delete_previous_404_imag
 function handle_delete_previous_404_image()
 {
 	// Check nonce for security
-	if (!wp_verify_nonce($_POST['nonce'], 'delete_404_image_nonce')) {
+	if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'delete_404_image_nonce')) {
 		wp_die('Security check failed');
 	}
 
@@ -1516,17 +1518,17 @@ function handle_delete_previous_404_image()
 		wp_die('Insufficient permissions');
 	}
 
-	$image_id = intval($_POST['image_id']);
-	$option_name = sanitize_text_field($_POST['option_name']);
+	$image_id = isset($_POST['image_id']) ? intval($_POST['image_id']) : 0;
+	$option_name = isset($_POST['option_name']) ? sanitize_text_field($_POST['option_name']) : '';
 
 	if ($image_id) {
-		// Get current options
-		$options = get_option('p404_redirect_options', array());
+		// Get current options (use the plugin's real option key/helper)
+		$options = P404REDIRECT_get_my_options();
 
 		// Clear the specific option if it matches the image being deleted
-		if (isset($options[$option_name]) && $options[$option_name] == $image_id) {
+		if ($option_name !== '' && isset($options[$option_name]) && $options[$option_name] == $image_id) {
 			$options[$option_name] = '';
-			update_option('p404_redirect_options', $options);
+			P404REDIRECT_update_my_options($options);
 		}
 
 		// Delete the attachment
@@ -1546,7 +1548,7 @@ add_action('wp_ajax_send_test_404_email', 'handle_send_test_404_email');
 function handle_send_test_404_email()
 {
 	// Check nonce for security
-	if (!wp_verify_nonce($_POST['nonce'], 'test_404_email_nonce')) {
+	if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'test_404_email_nonce')) {
 		wp_send_json_error('Security check failed');
 	}
 

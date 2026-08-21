@@ -4,7 +4,7 @@ Plugin Name: All 404 Redirect to Homepage
 Plugin URI: https://www.wp-buy.com
 Description: a plugin to redirect 404 pages to home page or any custom page
 Author: wp-buy
-Version: 5.6
+Version: 5.7
 Author URI: https://www.wp-buy.com
 */
 register_activation_hook(__FILE__, 'p404_modify_htaccess');
@@ -563,37 +563,59 @@ function p404_redirect()
         $options = P404REDIRECT_get_my_options();
         $link = P404REDIRECT_get_current_URL();
 
-        // Prevent infinite redirection loops
-        if ($link == $options['p404_redirect_to']) {
-            echo "<b>All 404 Redirect to Homepage</b> has detected that the target URL is invalid. This will cause an infinite loop redirection. Please go to the plugin settings and correct the target link!";
-            exit();
+        // Sanitize the configured target URL before doing anything with it.
+        $target = isset($options['p404_redirect_to']) ? esc_url_raw(trim($options['p404_redirect_to'])) : '';
+
+        // Nothing to do if redirection is disabled or no valid target is set.
+        if ($options['p404_status'] != '1' || $target === '') {
+            return;
         }
 
-        // Check if redirection is enabled and a target URL is set
-        if ($options['p404_status'] == '1' && $options['p404_redirect_to'] != '') {
-
-            // Fetch the redirection type (default to 301)
-            $redirect_type = isset($options['p404_redirect_type']) ? intval($options['p404_redirect_type']) : 301;
-
-            // Check if this is a media link and media exclusion is enabled
-            $is_media_link = (isset($link) && strpos($link, '/wp-content') !== false);
-            $exclude_media = (isset($options['p404_execlude_media']) && $options['p404_execlude_media'] == '1');
-
-            if ($exclude_media && $is_media_link) {
-                // Media links: exclude from logging but still redirect
-                header("HTTP/1.1 $redirect_type " . ($redirect_type == 301 ? "Moved Permanently" : "Found"));
-                header("Location: " . $options['p404_redirect_to']);
-                exit();
-            } else {
-                // Regular 404s: Log the redirect with IP and referrer data
-                P404REDIRECT_add_redirected_link($link);
-
-                // Perform the redirect with the specified type
-                header("HTTP/1.1 $redirect_type " . ($redirect_type == 301 ? "Moved Permanently" : "Found"));
-                header("Location: " . $options['p404_redirect_to']);
+        // Prevent infinite redirection loops: if the current 404 URL is the
+        // same as the target, don't redirect (would loop forever).
+        if (untrailingslashit($link) === untrailingslashit($target)) {
+            // Only surface the warning to administrators; regular visitors
+            // should just see the normal 404 page, not an internal message.
+            if (current_user_can('manage_options')) {
+                echo "<b>All 404 Redirect to Homepage</b> has detected that the target URL is invalid. This will cause an infinite loop redirection. Please go to the plugin settings and correct the target link!";
                 exit();
             }
+            return;
         }
+
+        // Fetch the redirection type (default to 301, only allow 301/302).
+        $redirect_type = isset($options['p404_redirect_type']) ? intval($options['p404_redirect_type']) : 301;
+        if ($redirect_type !== 302) {
+            $redirect_type = 301;
+        }
+
+        // Check if this is a media link and media exclusion is enabled.
+        $is_media_link = (isset($link) && strpos($link, '/wp-content') !== false);
+        $exclude_media = (isset($options['p404_execlude_media']) && $options['p404_execlude_media'] == '1');
+
+        // Log the redirect unless it's an excluded media link.
+        if (!($exclude_media && $is_media_link)) {
+            P404REDIRECT_add_redirected_link($link);
+        }
+
+        // The admin may intentionally point 404s at an external site. Allow the
+        // configured target's host through the safe-redirect host whitelist so
+        // legitimate external targets work, while still blocking header
+        // injection and arbitrary hosts.
+        $p404_allow_host = function ($hosts) use ($target) {
+            $target_host = wp_parse_url($target, PHP_URL_HOST);
+            if ($target_host) {
+                $hosts[] = $target_host;
+            }
+            return $hosts;
+        };
+        add_filter('allowed_redirect_hosts', $p404_allow_host);
+
+        // Perform the redirect safely (blocks header/CRLF injection).
+        wp_safe_redirect($target, $redirect_type);
+
+        remove_filter('allowed_redirect_hosts', $p404_allow_host);
+        exit();
     }
 }
 
@@ -712,19 +734,19 @@ function p404_modify_htaccess()
             if ($image_data && !empty($image_data[0])) {
                 $image = $image_data[0];
                 $ruls[] = <<<EOT
-    RewriteOptions inherit
-    <IfModule mod_rewrite.c>
-    RewriteEngine on
-    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
-    RewriteRule \.(gif|jpe?g|png|bmp) $image [NC,L]
-    </IfModule>
-    EOT;
+RewriteOptions inherit
+<IfModule mod_rewrite.c>
+RewriteEngine on
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f
+RewriteRule \.(gif|jpe?g|png|bmp) $image [NC,L]
+</IfModule>
+EOT;
                 //NC (no case, case insensitive, useless in this context) and L (last rule if applied)
                 return p404_add_htaccess($ruls);
             } else {
-                // Image doesn't exist, clear the option
+                // Image doesn't exist, clear the option (using the correct key).
                 $options['image_id_p404_redirect_to'] = '';
-                update_option('p404_redirect_options', $options);
+                P404REDIRECT_update_my_options($options);
 
                 return array(
                     'status' => false,
@@ -732,9 +754,16 @@ function p404_modify_htaccess()
                 );
             }
         }
+
+        return array('status' => false, 'message' => 'No valid image selected');
     }
 
-    return array('status' => false, 'message' => 'No valid image selected');
+    // Image 404 redirection is disabled: there's nothing to write. This is not
+    // an error condition, so report success so the caller doesn't show an error
+    // modal. We deliberately do NOT touch the .htaccess file here — the
+    // deactivation hook already removes any rules, and writing here would create
+    // an empty marker block (and the file itself) on activation.
+    return array('status' => true, 'message' => 'Image redirection disabled');
 }
 
 //echo WP_CONTENT_DIR;echo"<br>";
