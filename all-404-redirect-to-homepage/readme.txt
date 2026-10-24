@@ -5,7 +5,7 @@ Requires at least: 4.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Tested up to: 6.9
-Stable tag: 5.7
+Stable tag: 5.8
 
 Using this plugin, you can fix all 404 error links by redirecting them to homepage using the SEO 301 redirection. Improve your SEO rank & pages speed
 
@@ -51,6 +51,14 @@ Extract the zip file and just drop the contents in the wp-content/plugins/ direc
 
 
 == Changelog ==
+
+= 5.8 =
+* Security: Hardened 404 logging against database flooding. The "404 Logging" setting is now honored, URLs longer than 1,024 characters are no longer stored, and the log has a row cap (default 50,000) and retention period (default 90 days) enforced by a daily cleanup task.
+* Security: The visitor IP is now taken from REMOTE_ADDR. Forwarded headers are only used when the request comes from a trusted proxy (P404_TRUSTED_PROXIES constant or 'p404_trusted_proxies' filter).
+* Performance: The plugin options are no longer rewritten on every 404; the hit total is now read from the log table and cached.
+* Fixed the one-hour duplicate check using UTC while log times are stored in site time, which created extra rows on sites west of UTC.
+* Thanks to Warren Lavallee for responsibly reporting the 404 logging issue.
+
 
 = 5.7 =
 * Security: Hardened 404 redirection to use wp_safe_redirect() with URL sanitization, preventing header/CRLF injection and open redirects.

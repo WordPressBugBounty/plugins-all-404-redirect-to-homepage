@@ -4,7 +4,7 @@ Plugin Name: All 404 Redirect to Homepage
 Plugin URI: https://www.wp-buy.com
 Description: a plugin to redirect 404 pages to home page or any custom page
 Author: wp-buy
-Version: 5.7
+Version: 5.8
 Author URI: https://www.wp-buy.com
 */
 register_activation_hook(__FILE__, 'p404_modify_htaccess');
@@ -17,6 +17,8 @@ define('OPTIONS404', 'options-404-redirect-group');
 add_action('plugins_loaded', 'p404_check_and_upgrade_database');
 
 require_once('functions.php');
+require_once('logging.php');
+register_deactivation_hook(__FILE__, 'p404_unschedule_prune');
 add_action('admin_menu', 'p404_admin_menu');
 add_action('admin_head', 'p404_header_code');
 add_action('wp', 'p404_redirect');
@@ -56,7 +58,7 @@ function p404_free_add_items($admin_bar)
     }
 
     // Check if we have enough redirects to show stats
-    $links_count = P404REDIRECT_read_option_value('links', 0);
+    $links_count = p404_get_links_count();
     if ($links_count < 10) {
         // Keep original simple button
         $args = array(
@@ -593,8 +595,8 @@ function p404_redirect()
         $is_media_link = (isset($link) && strpos($link, '/wp-content') !== false);
         $exclude_media = (isset($options['p404_execlude_media']) && $options['p404_execlude_media'] == '1');
 
-        // Log the redirect unless it's an excluded media link.
-        if (!($exclude_media && $is_media_link)) {
+        // Log the redirect unless logging is disabled or it's an excluded media link.
+        if (p404_logging_enabled($options) && !($exclude_media && $is_media_link)) {
             P404REDIRECT_add_redirected_link($link);
         }
 

@@ -371,6 +371,8 @@ function clear_redirects_log_handler()
 	$options = P404REDIRECT_get_my_options();
 	$options['links'] = 0;
 	P404REDIRECT_update_my_options($options);
+	update_option(P404_HITS_OFFSET_OPTION, 0, false);
+	delete_transient(P404_LOG_STATS_TRANSIENT);
 
 	// Redirect back to the 404 URLs tab with a success message
 	wp_redirect(admin_url('admin.php?page=all-404-redirect-to-homepage.php&mytab=404urls'));
@@ -380,7 +382,7 @@ function clear_redirects_log_handler()
 function sample_admin_notice__error()
 {
 	$class = 'notice notice-error';
-	$links_count = P404REDIRECT_read_option_value('links', 0);
+	$links_count = p404_get_links_count();
 
 
 	if (get_option('P404_alert_msg') != 'hidemsg' && $links_count > 500) {
@@ -624,9 +626,13 @@ function P404REDIRECT_add_redirected_link($link)
 			return false; // Don't log homepage or empty URLs
 		}
 
-		// Increment the redirect count in options
-		$links = P404REDIRECT_read_option_value('links', 0);
-		P404REDIRECT_save_option_value('links', $links + 1);
+		// Very long URLs are almost always junk/bot probes: redirect, don't store.
+		if (strlen($link) > p404_log_max_url_length()) {
+			return false;
+		}
+
+		// No per-request write to the options array any more: the hit total is
+		// derived from the table (see p404_get_links_count()).
 
 		// Get visitor information securely
 		$ip_address = p404_get_visitor_ip();
@@ -638,14 +644,14 @@ function P404REDIRECT_add_redirected_link($link)
 		// Check if the exact same URL, IP, and referrer combination exists recently (within 1 hour)
 		$wpdb->last_error = '';
 		$recent_entry = $wpdb->get_row($wpdb->prepare("
-            SELECT * FROM {$table_name} 
+            SELECT id, count FROM {$table_name} 
             WHERE url = %s 
             AND ip_address = %s 
             AND referrer = %s 
             AND last_redirected > %s
             ORDER BY last_redirected DESC 
             LIMIT 1
-        ", $link, $ip_address, $referrer, date('Y-m-d H:i:s', strtotime('-1 hour'))));
+        ", $link, $ip_address, $referrer, p404_local_mysql_time(time() - HOUR_IN_SECONDS)));
 
 		if ($wpdb->last_error) {
 			p404_log('Database error checking recent entry - ' . $wpdb->last_error);
@@ -655,22 +661,23 @@ function P404REDIRECT_add_redirected_link($link)
 		if ($recent_entry) {
 			// Update existing recent entry
 			$wpdb->last_error = '';
-			$result = $wpdb->update(
-				$table_name,
-				array(
-					'count' => $recent_entry->count + 1,
-					'last_redirected' => current_time('mysql')
-				),
-				array('id' => $recent_entry->id),
-				array('%d', '%s'),
-				array('%d')
-			);
+			$result = $wpdb->query($wpdb->prepare(
+				"UPDATE {$table_name} SET count = count + 1, last_redirected = %s WHERE id = %d",
+				current_time('mysql'),
+				$recent_entry->id
+			));
 
 			if ($wpdb->last_error) {
 				p404_log('Database error updating redirect count - ' . $wpdb->last_error);
 				return false;
 			}
 		} else {
+			// Row cap reached: keep counting known rows but don't add new ones
+			// until the prune job has trimmed the table.
+			if (p404_log_is_full()) {
+				return false;
+			}
+
 			// Insert new record
 			$wpdb->last_error = '';
 			$result = $wpdb->insert(
@@ -698,57 +705,7 @@ function P404REDIRECT_add_redirected_link($link)
 	}
 }
 
-function p404_get_visitor_ip()
-{
-	$ip_keys = array(
-		'HTTP_CF_CONNECTING_IP',     // Cloudflare
-		'HTTP_CLIENT_IP',            // Proxy
-		'HTTP_X_FORWARDED_FOR',      // Load Balancer/Proxy
-		'HTTP_X_FORWARDED',          // Proxy
-		'HTTP_X_CLUSTER_CLIENT_IP',  // Cluster
-		'HTTP_FORWARDED_FOR',        // Proxy
-		'HTTP_FORWARDED',            // Proxy
-		'HTTP_X_REAL_IP',            // Nginx
-		'REMOTE_ADDR'                // Standard
-	);
-
-	foreach ($ip_keys as $key) {
-		if (!empty($_SERVER[$key])) {
-			$ip_list = explode(',', sanitize_text_field($_SERVER[$key]));
-
-			foreach ($ip_list as $ip) {
-				$ip = trim($ip);
-
-				// Validate IP format
-				if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-					continue;
-				}
-
-				// Skip private/reserved ranges for public IPs
-				if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-					return $ip;
-				}
-
-				// For development/local environments, accept private IPs
-				if (
-					in_array($ip, array('127.0.0.1', '::1')) ||
-					filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6)
-				) {
-					return $ip;
-				}
-			}
-		}
-	}
-
-	// Fallback to REMOTE_ADDR with validation
-	$remote_addr = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field($_SERVER['REMOTE_ADDR']) : 'unknown';
-	if (filter_var($remote_addr, FILTER_VALIDATE_IP)) {
-		return $remote_addr;
-	}
-
-	return 'unknown';
-}
-
+// p404_get_visitor_ip() now lives in logging.php (REMOTE_ADDR unless a trusted proxy is configured).
 
 function p404_get_referrer()
 {
@@ -1563,7 +1520,7 @@ function handle_send_test_404_email()
 	}
 
 	// Check if we have enough redirects
-	$total_redirects = P404REDIRECT_read_option_value('links', 0);
+	$total_redirects = p404_get_links_count(true);
 	if ($total_redirects < 5) {
 		wp_send_json_error('Not enough redirect data available. Need at least 5 redirects to send test email.');
 	}

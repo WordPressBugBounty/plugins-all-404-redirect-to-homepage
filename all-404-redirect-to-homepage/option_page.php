@@ -23,6 +23,12 @@ if ($redirect_to !== '') {
         P404REDIRECT_save_option_value('img_p404_status', $post_val('img_p404_status', '2'));
         P404REDIRECT_save_option_value('image_id_p404_redirect_to', absint(isset($_POST['misha-img']) ? $_POST['misha-img'] : 0));
         P404REDIRECT_save_option_value('p404_redirect_type', $post_val('p404_redirect_type', '301'));
+        // 404 log limits (5.8)
+        $logging_status = $post_val('p404_logging_status', '1') === '2' ? '2' : '1';
+        P404REDIRECT_save_option_value('p404_logging_status', $logging_status);
+        P404REDIRECT_save_option_value('p404_log_retention_days', min(3650, absint($post_val('p404_log_retention_days', P404_LOG_DEFAULT_RETENTION_DAYS))));
+        P404REDIRECT_save_option_value('p404_log_max_rows', min(10000000, absint($post_val('p404_log_max_rows', P404_LOG_DEFAULT_MAX_ROWS))));
+        delete_transient(P404_LOG_STATS_TRANSIENT);
         P404REDIRECT_save_option_value('email_notifications_enabled', $post_val('email_notifications_enabled', '2'));
         P404REDIRECT_save_option_value('email_frequency', $post_val('email_frequency', 'weekly'));
         P404REDIRECT_save_option_value('notification_email', sanitize_email(isset($_POST['notification_email']) ? wp_unslash($_POST['notification_email']) : ''));
@@ -282,6 +288,38 @@ $notification_email = P404REDIRECT_read_option_value('notification_email', get_o
                                 <div class="help-text">Exclude media files (images, videos, etc.) from 404 logging to keep your database clean and efficient</div>
                             </div>
                         </div>
+
+                        <div class="form-group">
+                            <label class="form-label">404 Logging:</label>
+                            <div class="form-control">
+                                <?php
+                                $drop = new p404redirect_dropdown('p404_logging_status');
+                                $drop->add('Enabled', '1');
+                                $drop->add('Disabled', '2');
+                                $drop->dropdown_print();
+                                $drop->select(p404_logging_enabled($options) ? '1' : '2');
+                                ?>
+                                <div class="help-text">When disabled, 404s are still redirected but nothing is written to the 404 log</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Keep log entries for (days):</label>
+                            <div class="form-control">
+                                <input type="number" min="0" max="3650" step="1" name="p404_log_retention_days" class="regular-text" style="max-width:120px"
+                                    value="<?php echo esc_attr(p404_log_retention_days($options)); ?>">
+                                <div class="help-text">Entries not hit for longer than this are deleted daily. 0 = keep forever</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Maximum log entries:</label>
+                            <div class="form-control">
+                                <input type="number" min="0" max="10000000" step="1000" name="p404_log_max_rows" class="regular-text" style="max-width:120px"
+                                    value="<?php echo esc_attr(p404_log_max_rows($options)); ?>">
+                                <div class="help-text">When reached, new URLs stop being logged and the oldest entries are trimmed. 0 = no limit</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -345,7 +383,7 @@ $notification_email = P404REDIRECT_read_option_value('notification_email', get_o
                 </div>
                 <?php
                 // Get total redirects count for test mail condition
-                $total_redirects = P404REDIRECT_read_option_value('links', 0);
+                $total_redirects = p404_get_links_count(true);
                 ?>
 
                 <div class="form-section">
@@ -545,7 +583,7 @@ $notification_email = P404REDIRECT_read_option_value('notification_email', get_o
 
             global $wpdb;
             $table_name = $wpdb->prefix . 'redirects_404';
-            $total_redirects = P404REDIRECT_read_option_value('links', 0);
+            $total_redirects = p404_get_links_count(true);
 
             // Get unique IPs count (last 30 days)
             $unique_ips = $wpdb->get_var($wpdb->prepare("
